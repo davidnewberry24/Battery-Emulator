@@ -77,21 +77,6 @@ jobs:
         esptool --chip esp32 merge-bin -o .pio/build/stark_330/factory.bin --flash-mode dio --flash-freq 80m --flash-size 8MB 0x1000 .pio/build/stark_330/bootloader.bin 0x8000 .pio/build/stark_330/partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 .pio/build/stark_330/firmware.bin
         mv .pio/build/stark_330/factory.bin output/BE_${{ steps.vars.outputs.tag }}_StarkCMR.factory.bin
 
-    - name: 🌐 Deploy to Web Installer repo
-      env:
-        WEB_INSTALLER_PUSH_TOKEN: ${{ secrets.WEB_INSTALLER_PUSH_TOKEN }}
-        REPO_OWNER: ${{ github.repository_owner }}
-      run: |
-        git clone https://$WEB_INSTALLER_PUSH_TOKEN@github.com/$REPO_OWNER/BE-Web-Installer web-installer
-        cd web-installer
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        mkdir -p images/${{ steps.vars.outputs.tag }}
-        cp ../output/*.factory.bin ../output/*.ota.bin images/${{ steps.vars.outputs.tag }}/
-        git add images
-        git commit -m "Deploy from GitHub Actions"
-        git push origin main
-
     - name: 📡 Upload to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
