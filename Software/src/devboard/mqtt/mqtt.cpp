@@ -103,6 +103,7 @@ struct SensorConfig {
   const char* value_template;
   const char* unit;
   const char* device_class;
+  const char* suggested_display_precision;
 
   // A function that returns true for the battery if it supports this config
   std::function<bool(Battery*)> condition;
@@ -116,33 +117,33 @@ static std::function<bool(Battery*)> supports_charged = [](Battery* b) {
 };
 
 SensorConfig batterySensorConfigTemplate[] = {
-    {"SOC", "SOC (Scaled)", "", "%", "battery", always},
-    {"SOC_real", "SOC (real)", "", "%", "battery", always},
-    {"state_of_health", "State Of Health", "", "%", "battery", always},
-    {"temperature_min", "Temperature Min", "", "°C", "temperature", always},
-    {"temperature_max", "Temperature Max", "", "°C", "temperature", always},
-    {"stat_batt_power", "Stat Batt Power", "", "W", "power", always},
-    {"battery_current", "Battery Current", "", "A", "current", always},
-    {"cell_max_voltage", "Cell Max Voltage", "", "V", "voltage", always},
-    {"cell_min_voltage", "Cell Min Voltage", "", "V", "voltage", always},
-    {"cell_voltage_delta", "Cell Voltage Delta", "", "mV", "voltage", always},
-    {"battery_voltage", "Battery Voltage", "", "V", "voltage", always},
-    {"total_capacity", "Battery Total Capacity", "", "Wh", "energy", always},
-    {"remaining_capacity", "Battery Remaining Capacity (scaled)", "", "Wh", "energy", always},
-    {"remaining_capacity_real", "Battery Remaining Capacity (real)", "", "Wh", "energy", always},
-    {"max_discharge_power", "Battery Max Discharge Power", "", "W", "power", always},
-    {"max_charge_power", "Battery Max Charge Power", "", "W", "power", always},
-    {"charged_energy", "Battery Charged Energy", "", "Wh", "energy", supports_charged},
-    {"discharged_energy", "Battery Discharged Energy", "", "Wh", "energy", supports_charged},
-    {"balancing_active_cells", "Balancing Active Cells", "", "", "", always},
-    {"balancing_status", "Balancing Status", "", "", "", always}};
+    {"SOC", "SOC (Scaled)", "", "%", "battery", "2", always},
+    {"SOC_real", "SOC (real)", "", "%", "battery", "2", always},
+    {"state_of_health", "State Of Health", "", "%", "battery", "2", always},
+    {"temperature_min", "Temperature Min", "", "°C", "temperature", "1", always},
+    {"temperature_max", "Temperature Max", "", "°C", "temperature", "1", always},
+    {"stat_batt_power", "Stat Batt Power", "", "W", "power", "2", always},
+    {"battery_current", "Battery Current", "", "A", "current", "2", always},
+    {"cell_max_voltage", "Cell Max Voltage", "", "V", "voltage", "3", always},
+    {"cell_min_voltage", "Cell Min Voltage", "", "V", "voltage", "3", always},
+    {"cell_voltage_delta", "Cell Voltage Delta", "", "mV", "voltage", "0", always},
+    {"battery_voltage", "Battery Voltage", "", "V", "voltage", "2", always},
+    {"total_capacity", "Battery Total Capacity", "", "Wh", "energy", "2", always},
+    {"remaining_capacity", "Battery Remaining Capacity (scaled)", "", "Wh", "energy", "2", always},
+    {"remaining_capacity_real", "Battery Remaining Capacity (real)", "", "Wh", "energy", "2", always},
+    {"max_discharge_power", "Battery Max Discharge Power", "", "W", "power", "2", always},
+    {"max_charge_power", "Battery Max Charge Power", "", "W", "power", "2", always},
+    {"charged_energy", "Battery Charged Energy", "", "Wh", "energy", "2", supports_charged},
+    {"discharged_energy", "Battery Discharged Energy", "", "Wh", "energy", "2", supports_charged},
+    {"balancing_active_cells", "Balancing Active Cells", "", "", "", "0", always},
+    {"balancing_status", "Balancing Status", "", "", "", "0", always}};
 
-SensorConfig globalSensorConfigTemplate[] = {{"bms_status", "BMS Status", "", "", "", always},
-                                             {"pause_status", "Pause Status", "", "", "", always},
-                                             {"event_level", "Event Level", "", "", "", always},
-                                             {"emulator_status", "Emulator Status", "", "", "", always},
-                                             {"emulator_uptime", "Emulator Uptime", "", "s", "duration", always},
-                                             {"cpu_temp", "CPU Temperature", "", "°C", "temperature", always}};
+SensorConfig globalSensorConfigTemplate[] = {{"bms_status", "BMS Status", "", "", "", "0", always},
+                                             {"pause_status", "Pause Status", "", "", "", "0", always},
+                                             {"event_level", "Event Level", "", "", "", "0", always},
+                                             {"emulator_status", "Emulator Status", "", "", "", "0", always},
+                                             {"emulator_uptime", "Emulator Uptime", "", "s", "duration", "0", always},
+                                             {"cpu_temp", "CPU Temperature", "", "°C", "temperature", "0", always}};
 
 static std::list<SensorConfig> sensorConfigs;
 
@@ -194,6 +195,8 @@ static String generateButtonAutoConfigTopic(const char* subtype) {
 void set_common_discovery_attributes(JsonDocument& doc) {
   doc["device"]["identifiers"][0] = device_id;
   doc["device"]["manufacturer"] = "DalaTech";
+  doc["device"]["sw_version"] = version_number;
+  doc["device"]["model_id"] = esp32hal->name();
   doc["device"]["model"] = "BatteryEmulator";
   doc["device"]["name"] = device_name;
   doc["availability"][0]["topic"] = lwt_topic;
@@ -209,6 +212,7 @@ void set_battery_voltage_attributes(JsonDocument& doc, int i, int cellNumber, co
   doc["unique_id"] = topic_name + object_id_prefix + "_battery_voltage_cell" + String(cellNumber);
   doc["device_class"] = "voltage";
   doc["state_class"] = "measurement";
+  doc["suggested_display_precision"] = "3";
   doc["state_topic"] = state_topic;
   doc["unit_of_measurement"] = "V";
   doc["value_template"] = "{{ value_json.cell_voltages[" + String(i) + "] }}";
@@ -301,6 +305,15 @@ static bool publish_common_info(void) {
       if (config.device_class != nullptr && strlen(config.device_class) > 0) {
         doc["device_class"] = config.device_class;
         doc["state_class"] = "measurement";
+      }
+      if (config.suggested_display_precision == "3") {
+        doc["suggested_display_precision"] = "3";
+      }
+      if (config.suggested_display_precision == "2" ) {
+        doc["suggested_display_precision"] = "2";
+      }
+      if (config.suggested_display_precision == "1") {
+        doc["suggested_display_precision"] = "1";
       }
       set_common_discovery_attributes(doc);
       serializeJson(doc, mqtt_msg);
@@ -683,12 +696,6 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 }
 
 bool init_mqtt(void) {
-
-  if (battery == nullptr) {
-    logging.println("ERROR: No battery selected. Aborting MQTT initialization");
-    return false;
-  }
-
   if (ha_autodiscovery_enabled) {
     create_battery_sensor_configs();
     create_global_sensor_configs();
