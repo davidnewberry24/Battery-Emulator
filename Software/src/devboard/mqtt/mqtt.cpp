@@ -306,14 +306,8 @@ static bool publish_common_info(void) {
         doc["device_class"] = config.device_class;
         doc["state_class"] = "measurement";
       }
-      if (config.suggested_display_precision == "3") {
-        doc["suggested_display_precision"] = "3";
-      }
-      if (config.suggested_display_precision == "2" ) {
-        doc["suggested_display_precision"] = "2";
-      }
-      if (config.suggested_display_precision == "1") {
-        doc["suggested_display_precision"] = "1";
+      if (config.suggested_display_precision != nullptr && strlen(config.suggested_display_precision) > 0) {
+        doc["suggested_display_precision"] = config.suggested_display_precision;
       }
       set_common_discovery_attributes(doc);
       serializeJson(doc, mqtt_msg);
@@ -696,6 +690,12 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 }
 
 bool init_mqtt(void) {
+
+  if (battery == nullptr) {
+    logging.println("ERROR: No battery selected. Aborting MQTT initialization");
+    return false;
+  }
+
   if (ha_autodiscovery_enabled) {
     create_battery_sensor_configs();
     create_global_sensor_configs();
