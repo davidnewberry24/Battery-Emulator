@@ -78,7 +78,7 @@ jobs:
         mv .pio/build/stark_330/factory.bin output/BE_${{ steps.vars.outputs.tag }}_StarkCMR.factory.bin
 
     - name: 📡 Upload to GitHub Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ steps.vars.outputs.tag }}
         files: |
